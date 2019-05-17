@@ -1,0 +1,321 @@
+
+	// 1、创建出一个Optional容器，容器里边并没有装载着对象
+    private static final Optional<?> EMPTY = new Optional<>();
+
+	// 2、代表着容器中的对象
+    private final T value;
+
+	// 3、私有构造方法
+    private Optional() {
+        this.value = null;
+    }
+
+	// 4、得到一个Optional容器，Optional没有装载着对象
+    public static<T> Optional<T> empty() {
+        @SuppressWarnings("unchecked")
+        Optional<T> t = (Optional<T>) EMPTY;
+        return t;
+    }
+
+	// 5、私有构造方法(带参数)，参数就是具体的要装载的对象，如果传进来的对象为null，抛出异常
+    private Optional(T value) {
+        this.value = Objects.requireNonNull(value);
+    }
+
+	// 5.1、如果传进来的对象为null，抛出异常
+    public static <T> T requireNonNull(T obj) {
+        if (obj == null)
+            throw new NullPointerException();
+        return obj;
+    }
+
+
+	// 6、创建出Optional容器，并将对象(value)装载到Optional容器中。
+	// 传入的value如果为null，抛出异常(调用的是Optional(T value)方法)
+    public static <T> Optional<T> of(T value) {
+        return new Optional<>(value);
+    }
+
+	// 创建出Optional容器，并将对象(value)装载到Optional容器中。
+	// 传入的value可以为null，如果为null，返回一个没有装载对象的Optional对象
+    public static <T> Optional<T> ofNullable(T value) {
+        return value == null ? empty() : of(value);
+    }
+所以可以得出创建Optional容器有两种方式：
+
+调用ofNullable()方法，传入的对象可以为null
+调用of()方法，传入的对象不可以为null，否则抛出NullPointerException
+下面我们简单就可以看看用法了：
+
+import lombok.Data;
+@Data
+public class User {
+
+    private Integer id;
+    private String name;
+    private Short age;
+}
+
+测试：
+public static void main(String[] args) {
+
+    User user = new User();
+    User user1 = null;
+
+    // 传递进去的对象不可以为null，如果为null则抛出异常
+    Optional<User> op1 = Optional.of(user1);
+
+    // 传递进去的对象可以为null，如果为null则返回一个没有装载对象的Optional容器
+    Optional<User> op2 = Optional.ofNullable(user);
+}
+2.2Optional容器简单的方法
+// 得到容器中的对象，如果为null就抛出异常
+public T get() {
+    if (value == null) {
+        throw new NoSuchElementException("No value present");
+    }
+    return value;
+}
+
+// 判断容器中的对象是否为null
+public boolean isPresent() {
+    return value != null;
+}
+
+// 如果容器中的对象存在，则返回。否则返回传递进来的参数
+public T orElse(T other) {
+    return value != null ? value : other;
+}
+
+这三个方法是Optional类比较常用的方法，并且是最简单的。(因为参数不是函数式接口)
+
+下面我们继续看看用法：
+public static void main(String[] args) {
+
+        User user = new User();
+        User user1 = null;
+
+        Optional<User> op1 = Optional.ofNullable(user);
+        System.out.println(op1.isPresent());
+        System.out.println(op1.get());
+        System.out.println(op1.orElse(user1));
+
+    }
+我们调换一下顺序看看：
+
+public static void main(String[] args) {
+
+    User user = new User();
+    User user1 = null;
+
+    Optional<User> op1 = Optional.ofNullable(user1);
+    System.out.println(op1.isPresent());
+    System.out.println(op1.orElse(user));
+    System.out.println(op1.get());
+
+}
+2.3.1ifPresent方法
+首先来看看ifPresent(Consumer<? super T> consumer)方法
+
+
+public void ifPresent(Consumer<? super T> consumer) {
+    if (value != null)
+        consumer.accept(value);
+}
+
+@FunctionalInterface
+public interface Consumer<T> {
+    void accept(T t);
+}
+
+复制代码如果容器中的对象存在，则调用accept方法，比如说：
+
+public static void main(String[] args) {
+
+    User user = new User();
+    user.setName("Java3y");
+    test(user);
+}
+
+public static void test(User user) {
+
+    Optional<User> optional = Optional.ofNullable(user);
+
+    // 如果存在user，则打印user的name
+    optional.ifPresent((value) -> System.out.println(value.getName()));
+
+    // 旧写法
+    if (user != null) {
+        System.out.println(user.getName());
+    }
+}
+复制代码2.3.2orElseGet和orElseThrow方法
+直接看源码：
+
+// 如果对象存在，则直接返回，否则返回由Supplier接口的实现用来生成默认值
+public T orElseGet(Supplier<? extends T> other) {
+    return value != null ? value : other.get();
+}
+
+
+@FunctionalInterface
+public interface Supplier<T> {
+    T get();
+}
+
+
+// 如果存在，则返回。否则抛出supplier接口创建的异常
+public <X extends Throwable> T orElseThrow(Supplier<? extends X> exceptionSupplier) throws X {
+    if (value != null) {
+        return value;
+    } else {
+        throw exceptionSupplier.get();
+    }
+}
+
+复制代码例子：
+
+public static void main(String[] args) {
+
+    User user = new User();
+    user.setName("Java3y");
+    test(user);
+}
+
+public static void test(User user) {
+
+    Optional<User> optional = Optional.ofNullable(user);
+
+    // 如果存在user，则直接返回，否则创建出一个新的User对象
+    User user1 = optional.orElseGet(() -> new User());
+    
+    // 旧写法
+    if (user != null) {
+        user = new User();
+    }
+}
+复制代码总的来说跟我们上面所讲的orElse()差不多，只不过它可以通过Supplier接口的实现来生成默认值。
+2.3.3filter方法
+直接看源码：
+
+// 如果容器中的对象存在，并且符合过滤条件，返回装载对象的Optional容器，否则返回一个空的Optional容器
+public Optional<T> filter(Predicate<? super T> predicate) {
+    Objects.requireNonNull(predicate);
+    if (!isPresent())
+        return this;
+    else
+        return predicate.test(value) ? this : empty();
+}
+
+
+// 接口
+@FunctionalInterface
+public interface Predicate<T> {
+
+    boolean test(T t);
+}
+复制代码返回Optional对象我们就可以实现链式调用了！
+例子：
+
+public static void test(User user) {
+
+    Optional<User> optional = Optional.ofNullable(user);
+
+    // 如果容器中的对象存在，并且符合过滤条件，返回装载对象的Optional容器，否则返回一个空的Optional容器
+    optional.filter((value) -> "Java3y".equals(value.getName()));
+}
+
+复制代码2.3.4map方法
+直接看源码：
+
+// 如果容器的对象存在，则对其执行调用mapping函数得到返回值。然后创建包含mapping返回值的Optional，否则返回空Optional。
+public<U> Optional<U> map(Function<? super T, ? extends U> mapper) {
+    Objects.requireNonNull(mapper);
+    if (!isPresent())
+        return empty();
+    else {
+        return Optional.ofNullable(mapper.apply(value));
+    }
+}
+
+
+// 接口
+@FunctionalInterface
+public interface Function<T, R> {
+    R apply(T t);
+}
+复制代码例子：
+
+public static void test(User user) {
+
+    Optional<User> optional = Optional.ofNullable(user);
+
+    // 如果容器的对象存在，则对其执行调用mapping函数得到返回值。然后创建包含mapping返回值的Optional，否则返回空Optional。
+    optional.map(user1 -> user1.getName()).orElse("Unknown");
+}
+
+// 上面一句代码对应着最开始的老写法：
+
+public String tradition(User user) {
+    if (user != null) {
+        return user.getName();
+    }else{
+        return "Unknown";
+    }
+}
+
+复制代码2.3.5flatMap方法
+直接看源码：
+
+// flatMap方法与map方法类似，区别在于apply函数的返回值不同。map方法的apply函数返回值是? extends U，而flatMap方法的apply函数返回值必须是Optional
+public<U> Optional<U> flatMap(Function<? super T, Optional<U>> mapper) {
+    Objects.requireNonNull(mapper);
+    if (!isPresent())
+        return empty();
+    else {
+        return Objects.requireNonNull(mapper.apply(value));
+    }
+}
+复制代码2.3.6总结
+再来感受一下Optional的魅力
+
+public static void main(String[] args) {
+    User user = new User();
+    user.setName("Java3y");
+    System.out.println(test(user));
+}
+
+// 以前的代码v1
+public static String test2(User user) {
+    if (user != null) {
+        String name = user.getName();
+        if (name != null) {
+            return name.toUpperCase();
+        } else {
+            return null;
+        }
+    } else {
+        return null;
+    }
+}
+
+// 以前的代码v2
+public static String test3(User user) {
+    if (user != null && user.getName() != null) {
+        return user.getName().toUpperCase();
+    } else {
+        return null;
+    }
+}
+
+// 现在的代码
+public static String test(User user) {
+    return Optional.ofNullable(user)
+            .map(user1 -> user1.getName())
+            .map(s -> s.toUpperCase()).orElse(null);
+}
+复制代码Optional总结：
+
+filter，map或flatMap一个函数，函数的参数拿到的值一定不是null。所以我们通过filter，map 和 flatMap之类的函数可以将其安全的进行变换，最后通过orElse系列，get，isPresent 和 ifPresent将其中的值提取出来。
+
+
