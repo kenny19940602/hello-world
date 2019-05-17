@@ -50,3 +50,8 @@ public static void main(String[] args) {
     // 使用Lambda遍历List集合
     list.forEach(s -> System.out.println(s));
 }
+
+Function  输入参数为类型T， 输出为类型R， 记作 T -> R
+Consumer  输入参数为类型T， 输出为void， 记作 T -> void
+Supplier  没有输入参数， 输出为类型T， 记作 void -> T
+Predicate 输入参数为类型T， 输出为类型boolean， 记作 T -> boolean
