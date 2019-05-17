@@ -1,0 +1,52 @@
+public static void main(String[] args) {
+    // 用匿名内部类的方式来创建线程
+    new Thread(new Runnable() {
+        @Override
+        public void run() {
+            System.out.println("公众号：Java3y---回复1进群交流");
+        }
+    });
+
+    // 使用Lambda来创建线程
+    new Thread(() -> System.out.println("公众号：Java3y---回复1进群交流"));
+}
+
+
+
+public static void main(String[] args) {
+    Map<String, String> hashMap = new HashMap<>();
+    hashMap.put("公众号", "Java3y");
+    hashMap.put("交流群", "回复1");
+
+    // 使用增强for的方式来遍历hashMap
+    for (Map.Entry<String, String> entry : hashMap.entrySet()) {
+        System.out.println(entry.getKey()+":"+entry.getValue());
+    }
+
+    // 使用Lambda表达式的方式来遍历hashMap
+    hashMap.forEach((s, s2) -> System.out.println(s + ":" + s2));
+}
+
+
+public static void main(String[] args) {
+
+    List<String> list = new ArrayList<>();
+    list.add("Java3y");
+    list.add("3y");
+    list.add("光头");
+    list.add("帅哥");
+    
+    // 传统的方式删除"光头"的元素
+    ListIterator<String> iterator = list.listIterator();
+    while (iterator.hasNext()) {
+        if ("光头".equals(iterator.next())) {
+            iterator.remove();
+        }
+    }
+
+    // Lambda方式删除"光头"的元素
+    list.removeIf(s -> "光头".equals(s));
+    
+    // 使用Lambda遍历List集合
+    list.forEach(s -> System.out.println(s));
+}
