@@ -1,0 +1,159 @@
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @author Kenny
+ * @date 2019/7/7
+ */
+public class TestInterceptor {
+    public static void main(String[] args) {
+        //创建目标对象
+        LogInterceptor logInterceptor = new LogInterceptor();
+        TransactionInterceptor transactionInterceptor = new TransactionInterceptor();
+        DefaultExecutor target = new DefaultExecutor();
+        //创建拦截器链
+        IntercetproChain chain = new IntercetproChain();
+        chain.addInterceptor(transactionInterceptor);
+        chain.addInterceptor(logInterceptor);
+
+        Object proxy = chain.pluginAll(target);
+        //得到动态代理对象
+//        Object proxy = TargetProxyFactory.newProxy(target,logInterceptor);
+        //通过动态代理对象执行方法
+        Executor executor = (Executor) proxy;
+        executor.execute("select");
+
+    }
+}
+interface Executor{
+    void execute(String statement);
+}
+class DefaultExecutor implements Executor{
+
+    @Override
+    public void execute(String statement) {
+        System.out.println("run execute"+ statement);
+    }
+}
+class TargetProxyFactory{
+    public static Object newProxy(Object target,Interceptor interceptor){
+
+        //类加载器
+        ClassLoader loader = target.getClass().getClassLoader();
+        //方法信息
+        Class[] interfaces = target.getClass().getInterfaces();
+        //实现类
+        TargetProxyHandler handler = new TargetProxyHandler(target, interceptor);
+        Object proxy = Proxy.newProxyInstance(loader, interfaces, handler);
+        return proxy;
+    }
+}
+class TargetProxyHandler implements InvocationHandler {
+    Object target;
+    Interceptor interceptor;
+
+    public TargetProxyHandler(Object target, Interceptor interceptor) {
+        this.target = target;
+        this.interceptor = interceptor;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Exception {
+        //实现日志，事务，分页，监控，权限验证
+        //调用拦截器
+        Invocation invocation = new Invocation(target, method, args);
+        Object result = interceptor.interceptor(invocation);
+        return result;
+    }
+}
+//封装目标方法信息
+class Invocation{
+    Object target;
+    Method method;
+    Object[] args;
+
+    public Invocation(Object target, Method method, Object[] args) {
+        this.target = target;
+        this.method = method;
+        this.args = args;
+    }
+
+    //调用目标方法
+    public Object process() throws Exception{
+        Object result = method.invoke(target, args);
+        return result;
+    }
+}
+interface Interceptor{
+    /**
+     * 实现拦截器的功能，调用目标方法
+     * @param invocation
+     * @return 目标方法的执行结果
+     * @throws Exception
+     */
+    Object interceptor(Invocation invocation)throws Exception;
+
+    /**
+     * 调用targetProxyFactory，得到动态代理对象
+     * @param target
+     * @return 动态代理对象
+     */
+    Object plugin(Object target);
+
+}
+
+/**
+ * 日志拦截器
+ */
+class LogInterceptor implements Interceptor{
+    @Override
+    public Object interceptor(Invocation invocation) throws Exception {
+        //实现拦截器的功能
+        System.out.println("Start time");
+        //调用目标方法
+        Object result = invocation.process();
+        System.out.println("End time");
+        return result;
+    }
+
+    @Override
+    public Object plugin(Object target) {
+        Object proxy = TargetProxyFactory.newProxy(target, this);
+        return proxy;
+    }
+}
+class TransactionInterceptor implements Interceptor{
+
+    @Override
+    public Object interceptor(Invocation invocation) throws Exception {
+        System.out.println("开始事务");
+        Object result = invocation.process();
+        System.out.println("结束事务");
+        return result;
+    }
+
+    @Override
+    public Object plugin(Object target) {
+        Object proxy = TargetProxyFactory.newProxy(target, this);
+        return proxy;
+    }
+}
+//拦截器链/责任链
+class IntercetproChain{
+    List<Interceptor> interceptors = new ArrayList<>();
+
+    public void addInterceptor(Interceptor interceptor) {
+        interceptors.add(interceptor);
+    }
+    //调用所有拦截器
+    public Object pluginAll(Object target){
+        for (Interceptor interceptor : interceptors) {
+            target = interceptor.plugin(target);
+        }
+        return target;
+
+    }
+}
